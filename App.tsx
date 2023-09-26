@@ -1,30 +1,48 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import LoginScreen from './src/screens/authentication/LoginScreen';
-import SignupScreen from './src/screens/authentication/SignupScreen';
-import ForgotPasswordScreen from './src/screens/authentication/ForgotPasswordScreen';
-import VerifyEmailScreen from './src/screens/authentication/VerifyEmailScreen';
-import ResetPasswordScreen from './src/screens/authentication/ResetPasswordScreen';
-import WelcomeScreen from './src/screens/WelcomeScreen';
+import {Provider, useSelector} from 'react-redux';
+import {RootState, store} from './src/redux/store/store';
+import AppNavigator from './src/navigation/AppNavigator';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import awsconfig from './src/aws-exports';
+import {Amplify, Hub} from 'aws-amplify';
+import {setUser} from './src/redux/slices/authSlice';
+import {getUser} from './src/services/AuthService';
+import Loader from './src/components/Loader';
 
-const Stack = createNativeStackNavigator();
-
+Amplify.configure(awsconfig);
 const App = () => {
+  const isLoading = useSelector((state: RootState) => state.app.isLoading);
+
+  useEffect(() => {
+    const unsubscribe = Hub.listen('auth', ({payload: {event, data}}) => {
+      switch (event) {
+        case 'signIn':
+          setUser(data);
+          break;
+        case 'signOut':
+          setUser(null);
+          break;
+      }
+    });
+
+    getUser();
+
+    return unsubscribe;
+  }, []);
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}>
-        <Stack.Screen name="Welcome" component={WelcomeScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </Provider>
+    </ErrorBoundary>
   );
 };
 

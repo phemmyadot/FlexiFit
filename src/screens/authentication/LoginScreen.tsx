@@ -1,6 +1,6 @@
 import {useNavigation} from '@react-navigation/native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import React from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
 import AuthScreensWrapper from '../../components/AuthScreensWrapper';
 import {globalStyles} from '../../styles/globalStyles';
 import Colors from '../../styles/colorStyles';
+import {signIn} from '../../services/AuthService';
+import {useDispatch} from 'react-redux';
+import {setUser} from '../../redux/slices/authSlice';
 
 type LoginScreenProps = {};
 
@@ -21,10 +24,18 @@ export type RootStackParamList = {
 
 const LoginScreen: React.FC<LoginScreenProps> = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const handleEmailLogin = () => {
-    // Add logic for email login
-  };
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const dispatch = useDispatch();
 
+  const handleEmailLogin = async () => {
+    try {
+      const user = await signIn(username, password);
+      dispatch(setUser(user)); // Dispatch action to set user in Redux state
+    } catch (error) {
+      console.error(error);
+    }
+  };
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
     // Add logic for social login with 'provider'
@@ -45,12 +56,16 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
           placeholder="Email"
           placeholderTextColor={Colors.light}
           keyboardType="email-address"
+          onChangeText={setUsername}
+          value={username}
           autoCapitalize="none"
         />
         <TextInput
           style={globalStyles.input}
           placeholder="Password"
           secureTextEntry
+          onChangeText={setPassword}
+          value={password}
           placeholderTextColor={Colors.light}
           autoCapitalize="none"
         />
